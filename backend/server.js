@@ -44,9 +44,9 @@ app.options("*", cors());
 connectDB();
 
 // Health Check Endpoint - Should be defined before other routes
+// Quick health check - no database ping
 app.get("/health", async (req, res) => {
   try {
-    // Check MongoDB connection status
     const dbState = mongoose.connection.readyState;
     const dbStatus = {
       0: "disconnected",
@@ -56,7 +56,7 @@ app.get("/health", async (req, res) => {
     };
 
     const healthCheck = {
-      status: "OK",
+      status: dbState === 1 ? "OK" : "Degraded",
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
       database: {
@@ -66,23 +66,40 @@ app.get("/health", async (req, res) => {
       environment: process.env.NODE_ENV || "development",
     };
 
-    // If database is not connected, return 503
-    if (dbState !== 1) {
-      return res.status(503).json({
-        ...healthCheck,
-        status: "Service Unavailable",
-      });
-    }
-
-    // Ping database to ensure it's responsive
-    await mongoose.connection.db.admin().ping();
-
-    res.status(200).json(healthCheck);
+    // Return 200 even if DB is connecting (for cold starts)
+    const statusCode = dbState === 1 ? 200 : 503;
+    res.status(statusCode).json(healthCheck);
   } catch (error) {
     res.status(503).json({
       status: "Service Unavailable",
-      uptime: process.uptime(),
+      error: error.message,
+    });
+  }
+});
+
+// Deep health check with database ping (slower)
+app.get("/health/deep", async (req, res) => {
+  try {
+    const dbState = mongoose.connection.readyState;
+
+    if (dbState !== 1) {
+      return res.status(503).json({
+        status: "Service Unavailable",
+        database: { connected: false },
+      });
+    }
+
+    // Ping database
+    await mongoose.connection.db.admin().ping();
+
+    res.status(200).json({
+      status: "OK",
       timestamp: new Date().toISOString(),
+      database: { connected: true, ping: "successful" },
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "Service Unavailable",
       error: error.message,
     });
   }

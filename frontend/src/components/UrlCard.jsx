@@ -50,7 +50,7 @@ export default function UrlCard({ url, onViewAnalytics, onDelete }) {
 
     setDeleting(true);
     try {
-      await API.delete(`/url/${url._id}`);
+      await API.delete(`/api/url/${url._id}`);
       onDelete();
     } catch (e) {
       console.error("Delete failed:", e);

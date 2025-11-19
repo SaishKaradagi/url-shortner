@@ -42,7 +42,7 @@ export default function Dashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await API.get("/url/me");
+        const res = await API.get("/api/url/me");
         setUrls(res.data);
         calculateStats(res.data);
       } catch (err) {

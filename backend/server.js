@@ -43,6 +43,45 @@ app.options("*", cors());
 // Connect to database
 connectDB();
 
+// 🔍 DEBUG endpoint - Add this after connectDB() call
+app.get("/debug/connection", async (req, res) => {
+  try {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        hasMongoURI: !!process.env.MONGO_URI,
+        mongoURILength: process.env.MONGO_URI?.length || 0,
+        mongoURIPreview: process.env.MONGO_URI
+          ? process.env.MONGO_URI.substring(0, 30) + "..."
+          : "NOT SET",
+      },
+      mongoose: {
+        readyState: mongoose.connection.readyState,
+        readyStateText: {
+          0: "disconnected",
+          1: "connected",
+          2: "connecting",
+          3: "disconnecting",
+        }[mongoose.connection.readyState],
+        host: mongoose.connection.host || "N/A",
+        name: mongoose.connection.name || "N/A",
+      },
+      vercel: {
+        region: process.env.VERCEL_REGION || "N/A",
+        deploymentId: process.env.VERCEL_DEPLOYMENT_ID || "N/A",
+      },
+    };
+
+    res.status(200).json(debugInfo);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack,
+    });
+  }
+});
+
 // Health Check Endpoint - Should be defined before other routes
 // Quick health check - no database ping
 app.get("/health", async (req, res) => {
